@@ -150,11 +150,6 @@
 			<maxRetryWait>5000</maxRetryWait>
 		</committer>
 	  </committer>
-	  
-	  
-	  
-	  
-	  
     </crawler>
   </crawlers>
 
