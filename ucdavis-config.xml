@@ -30,7 +30,7 @@
 	   <!-- URL to index second site -->
 	   #set($site_index2	= "https://hr.ucdavis.edu")
 	   <!-- Collection created in solar where to store documents -->
-	   #set($collection_solr	="http://localhost:8983/solr/ciroTest")
+	   #set($collection_solr	="http://localhost:8983/solr/test4")
 
 
 
@@ -83,7 +83,7 @@
       <workDir>./examples-output/minimum</workDir>
 
       <!-- Put a maximum depth to avoid infinite crawling (e.g. calendars). -->
-      <maxDepth>0</maxDepth>
+      <maxDepth>1</maxDepth>
 
       <!-- We know we don't want to crawl the entire site, so ignore sitemap. -->
       <sitemapResolverFactory ignore="true" />
@@ -114,6 +114,8 @@
 	<preParseHandlers>
                 <!-- If your target repository does not support arbitrary fields,
            make sure you only keep the fields you need. -->
+		         <tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.preparse" />
+				 last-modified
                  <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
                     <rename fromField="document.contentEncoding" toField="content_encoding" overwrite="true"/>
                     <rename fromField="document.contentType" toField="content_type" overwrite="true"/>
@@ -124,10 +126,29 @@
 	  
 	  
         <postParseHandlers>
+		<tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.postparse" />
+        <!-- Reject small documents (<100 Bytes)-->
+                <filter class="com.norconex.importer.handler.filter.impl.NumericMetadataFilter" onMatch="exclude" field="document.size.postparse" >
+                <condition operator="lt" number="100" />
+                </filter>
+				<!-- Rename fields -->
+        <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
+           <rename fromField="document.size.postparse" toField="document_lenght" overwrite="true" />
+        </tagger>
+		<tagger class="com.norconex.importer.handler.tagger.impl.DeleteTagger">
+            <fields>document.size.postparse</fields>
+        </tagger>
+				<tagger class="com.norconex.importer.handler.tagger.impl.DateFormatTagger"
+          fromField="last-modified"
+          toField="solr_date" 
+          toFormat="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" >
+      <fromFormat>yyyyMMdd</fromFormat>
+      
+  </tagger>
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text,content_encoding,content_type,content</fields>
+            <fields>title,keywords,description,document.reference,text,content_encoding,content_type,content,abstract,description,keywords,copyright,author,document_lenght,solr_date</fields>
           </tagger>
         </postParseHandlers>
       </importer> 
