@@ -26,7 +26,7 @@
        used classes in a shorter way.
        -->
 	   <!-- URL to index -->
-	   #set($site_index1	= "https://health.ucdavis.edu/community_relations/pdf/Community-Health-Needs-Assessment.pdf")
+	   #set($site_index1	= "https://health.ucdavis.edu")
 	   <!-- URL to index second site -->
 	   #set($site_index2	= "https://hr.ucdavis.edu")
 	   <!-- Collection created in solar where to store documents -->
@@ -184,6 +184,9 @@
 				var ti = str.substring(n+1,l);
 				metadata.setString('title',ti); 
 				} 
+				var cleanC = content;
+				metadata.setString('text_clean',cleanC.replace(/[\n\r\t]/g,''));
+				
 			]]></script>
 		</tagger>
 		  
@@ -191,7 +194,7 @@
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified</fields>
+            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean</fields>
           </tagger>
 		  
         </postParseHandlers>
