@@ -26,11 +26,11 @@
        used classes in a shorter way.
        -->
 	   <!-- URL to index -->
-	   #set($site_index1	= "https://health.ucdavis.edu")
+	   #set($site_index1	= "https://health.ucdavis.edu/community_relations/pdf/Community-Health-Needs-Assessment.pdf")
 	   <!-- URL to index second site -->
 	   #set($site_index2	= "https://hr.ucdavis.edu")
 	   <!-- Collection created in solar where to store documents -->
-	   #set($collection_solr	="http://localhost:8983/solr/test4")
+	   #set($collection_solr	="http://localhost:8983/solr/test6")
 
 
 
@@ -72,7 +72,7 @@
          -->
     <referenceFilters>
         <!-- Exclude images, CSS and JS files -->
-      <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter" onMatch="exclude" caseSensitive="false">jpg,jpeg,gif,png,ico,css,js</filter>
+      <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter" onMatch="exclude" caseSensitive="false">jpg,jpeg,gif,png,ico,css,js,svg</filter>
       <!-- Exclude dynamic pages containing a query (?) -->
       <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter" onMatch="exclude" caseSensitive="true">.+\?.*</filter>
     </referenceFilters>
@@ -101,7 +101,7 @@
          -->
       <metadataFilters>
 		<!-- Do not index content-type of CSS or JavaScript -->
-		<filter class="com.norconex.collector.core.filter.impl.RegexMetadataFilter" onMatch="exclude" caseSensitive="false" field="Content-Type">.*css.*|.*javascript.*</filter>
+		<filter class="com.norconex.collector.core.filter.impl.RegexMetadataFilter" onMatch="exclude" caseSensitive="false" field="Content-Type">.*css.*|.*javascript.*|.*svg.*</filter>
 	  </metadataFilters>        
 
       <!-- Be as nice as you can to sites you crawl. -->
@@ -115,42 +115,87 @@
                 <!-- If your target repository does not support arbitrary fields,
            make sure you only keep the fields you need. -->
 		         <tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.preparse" />
-				 last-modified
+				
                  <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
                     <rename fromField="document.contentEncoding" toField="content_encoding" overwrite="true"/>
                     <rename fromField="document.contentType" toField="content_type" overwrite="true"/>
-                    <rename fromField="CONTENT" toField="content" overwrite="true"/>
+                    <rename fromField="CONTENT" toField="contentClean" overwrite="true"/>
+					<rename fromField="text" toField="text_content" overwrite="true"/>
                 </tagger> 
                 <tagger class="com.norconex.importer.handler.tagger.impl.DebugTagger" logLevel="DEBUG"/>
-            </preParseHandlers>
+				
+      
+    </preParseHandlers>
 	  
 	  
-        <postParseHandlers>
+    <postParseHandlers>
+		<!--transformer class="com.norconex.importer.handler.transformer.impl.ReduceConsecutivesTransformer" caseSensitive="true">
+          <reduce>\s</reduce>
+          <reduce>\n</reduce>
+          <reduce>\r</reduce>
+          <reduce>\t</reduce>
+          <reduce>\n\r</reduce>
+          <reduce>\r\n</reduce>
+          <reduce>\s\n</reduce>
+          <reduce>\s\r</reduce>
+          <reduce>\s\r\n</reduce>
+          <reduce>\s\n\r</reduce>
+        </transformer-->
+		
 		<tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.postparse" />
         <!-- Reject small documents (<100 Bytes)-->
                 <filter class="com.norconex.importer.handler.filter.impl.NumericMetadataFilter" onMatch="exclude" field="document.size.postparse" >
                 <condition operator="lt" number="100" />
                 </filter>
-				<!-- Rename fields -->
+		
+		<!-- Rename fields -->
         <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
-           <rename fromField="document.size.postparse" toField="document_lenght" overwrite="true" />
+           <rename fromField="document.size.postparse" toField="document_length" overwrite="true" />
         </tagger>
+		
 		<tagger class="com.norconex.importer.handler.tagger.impl.DeleteTagger">
             <fields>document.size.postparse</fields>
         </tagger>
-				<tagger class="com.norconex.importer.handler.tagger.impl.DateFormatTagger"
+		
+		<tagger class="com.norconex.importer.handler.tagger.impl.DateFormatTagger"
           fromField="last-modified"
-          toField="solr_date" 
-          toFormat="yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" >
-      <fromFormat>yyyyMMdd</fromFormat>
+          toField="lastmodified" 
+          toFormat="yyyyMMdd" >
+           <fromFormat>yyyyMMdd</fromFormat>
+        </tagger>
+  
+				<tagger class="com.norconex.importer.handler.tagger.impl.ReplaceTagger">
+          <replace fromField="title" replaceAll="true" regex="true" caseSensitive="false">
+              <fromValue>[ \t\r\n]{2,}</fromValue>
+              <toValue xml:space="preserve"> </toValue>
+          </replace>
+      </tagger>
+	   
+	    <tagger class="com.norconex.importer.handler.tagger.impl.ScriptTagger">
+			<script><![CDATA[
+				var objectnoexist=null;
+				objectnoexist=metadata.getString('title');
+				var str = "";
+				if(typeof(objectnoexist)=='undefined' || objectnoexist == null ) {
+				str=metadata.getString('document.reference');
+				
+				var n = str.lastIndexOf("/");
+				var l = str.lastIndexOf(".");
+				var ti = str.substring(n+1,l);
+				metadata.setString('title',ti); 
+				} 
+			]]></script>
+		</tagger>
+		  
       
-  </tagger>
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text,content_encoding,content_type,content,abstract,description,keywords,copyright,author,document_lenght,solr_date</fields>
+            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified</fields>
           </tagger>
+		  
         </postParseHandlers>
+		
       </importer> 
       
       <!-- Decide what to do with your files by specifying a Committer. -->
@@ -163,7 +208,7 @@
 			<solrURL>$collection_solr</solrURL>
 			<sourceReferenceField keep="false">document.reference</sourceReferenceField>
 			<targetReferenceField>id</targetReferenceField>
-			<targetContentField>text</targetContentField>
+			<targetContentField>text_content</targetContentField>
 			<commitBatchSize>10</commitBatchSize>
 			<queueDir>/optional/queue/path/</queueDir>
 			<queueSize>100</queueSize>
