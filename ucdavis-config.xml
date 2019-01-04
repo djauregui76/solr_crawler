@@ -30,9 +30,9 @@
 	   <!-- URL to index second site -->
 	   #set($site_index2	= "https://hr.ucdavis.edu")
 	   <!-- Collection created in solar where to store documents -->
-	   #set($collection_solr	="http://localhost:8983/solr/test6")
-
-
+	   #set($collection_solr	="http://localhost:8983/solr/intranet")
+	   <!-- Deep of the crawler -->
+	   #set($site_deep	="5")
 
 
 
@@ -62,7 +62,7 @@
 			<replacements>
 				<replace>
 					<match>&amp;view=print</match>
-					<replacement>&amp;view=html</replacement>
+					<replacement>&amp;view=shtml</replacement>
 				</replace>
 			</replacements>
       </urlNormalizer>
@@ -83,7 +83,7 @@
       <workDir>./examples-output/minimum</workDir>
 
       <!-- Put a maximum depth to avoid infinite crawling (e.g. calendars). -->
-      <maxDepth>1</maxDepth>
+      <maxDepth>$site_deep</maxDepth>
 
       <!-- We know we don't want to crawl the entire site, so ignore sitemap. -->
       <sitemapResolverFactory ignore="true" />
@@ -114,6 +114,28 @@
 	<preParseHandlers>
                 <!-- If your target repository does not support arbitrary fields,
            make sure you only keep the fields you need. -->
+		   <transformer class="com.norconex.importer.handler.transformer.impl.StripBetweenTransformer" inclusive="false">
+             <stripBetween>
+              <start><![CDATA[<div class="navtop">]]></start>
+              <end><![CDATA[<div class="container" id="header">]]></end>
+            </stripBetween>
+			<stripBetween>
+              <start><![CDATA[<div class="navskip">]]></start>
+              <end><![CDATA[<!-- end nav -->]]></end>
+            </stripBetween>
+			<stripBetween>
+              <start><![CDATA[<div class="navskip">]]></start>
+              <end><![CDATA[<!-- End main search -->]]></end>
+            </stripBetween>
+			  <stripBetween>
+              <start><![CDATA[<div class="navskip">]]></start>
+              <end><![CDATA[<div id="breadcrumb">]]></end>
+            </stripBetween>
+			<stripBetween>
+              <start><![CDATA[<!------------------ Start primary menu navigation for Top Nav sites ------------------>]]></start>
+              <end><![CDATA[<!------------------ Start main content ------------------>]]></end>
+            </stripBetween>
+          </transformer> 
 		         <tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.preparse" />
 				
                  <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
@@ -186,6 +208,33 @@
 				} 
 				var cleanC = content;
 				metadata.setString('text_clean',cleanC.replace(/[\n\r\t]/g,''));
+				var source = metadata.getString('document.reference');
+				var find = "/";
+				var result = [];
+				for (i = 0; i < source.length; ++i) {
+						if (source.substring(i, i + find.length) == find) {
+							result.push(i);
+						}
+				}
+				var le = result.length;
+				
+	if( le > 2 ){
+		if(le >  3 ){
+			metadata.setString('level_1',source.substring(result[2]+1,result[3]));
+			if(source.substring(result[3]+1,result[4]).indexOf(".") !== -1 || result[4] == null){
+				metadata.setString('level_2','NA');
+			}else { 
+				metadata.setString('level_2',source.substring(result[3]+1,result[4]));
+			}
+		}else {
+			if(source.substring(result[2]+1).indexOf(".") !== -1 ){
+				metadata.setString('level_1','NA');
+			}else { 
+			metadata.setString('level_1',source.substring(result[2]+1));
+			}
+		}	  
+	}
+
 				
 			]]></script>
 		</tagger>
@@ -194,7 +243,7 @@
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean</fields>
+            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean,level_1,level_2</fields>
           </tagger>
 		  
         </postParseHandlers>
