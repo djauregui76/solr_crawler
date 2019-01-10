@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xml>
+<!-- 
+   Copyright 2010-2017 Norconex Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<fscollector id="XML Files for index">
+
+## Either uncomment or set the following variables or create yourself a 
+## sample-config.variables (or properties) with the same variables set.
+
+##set($path = "/path/to/content/to/index")
+##set($workdir = "/temp/workdir")
+
+#set($tagger = "com.norconex.importer.handler.tagger.impl")
+#set($transformer = "com.norconex.importer.handler.transformer.impl")
+
+<!-- Collection created in solar where to store documents -->
+	   #set($collection_solr	="http://localhost:8983/solr/files")
+
+
+
+
+  <logsDir>${workdir}/logs</logsDir>
+  <progressDir>${workdir}/progress</progressDir>
+  
+  <metadataFetcher class="com.norconex.collector.fs.fetch.impl.GenericFileMetadataFetcher"/>
+    <metadataFilters>
+      <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter"
+          onMatch="exclude" caseSensitive="false">html,pdf,doc</filter>
+      <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter"
+          onMatch="exclude" caseSensitive="false">.*example.com.*</filter>
+      
+    </metadataFilters>
+   <documentFetcher class="com.norconex.collector.fs.fetch.impl.GenericFileDocumentFetcher"/>
+  <documentFilters>
+      <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter"
+          onMatch="exclude" caseSensitive="false">html,pdf,doc</filter>
+  </documentFilters>
+  <referenceFilters>
+      <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter"
+          onMatch="exclude" caseSensitive="false">html,pdf,doc</filter>
+      <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter"
+          onMatch="exclude" caseSensitive="false">.*example.com.*</filter>
+    </referenceFilters>
+	
+	
+  <crawlers>
+    <crawler id="UC Davis Crawler">
+
+      <workDir>${workdir}</workDir>
+
+      <startPaths>
+        <path>${path}</path>
+      </startPaths>
+      
+      <numThreads>2</numThreads>
+
+      <keepDownloads>false</keepDownloads>
+
+      <importer>
+	  <preParseHandlers>
+	  <tagger class="com.norconex.importer.handler.tagger.impl.DOMTagger"
+           
+          parser="xml"
+          sourceCharset="UTF-8">
+		
+			<dom selector="title" toField="title" />
+			<dom selector="keywords"  toField="keywords" />
+			<dom selector="site"  toField="site" />
+			<dom selector="id"  toField="id" />
+			<dom selector="recommendation"  toField="recommendation" />
+			<dom selector="recommendation" extract="attr(algo)"  toField="ranking" />
+		</tagger>
+	  </preParseHandlers>
+	  
+        <postParseHandlers>
+          
+		  
+        </postParseHandlers>
+      </importer>
+      <committer class="com.norconex.committer.core.impl.MultiCommitter">
+			<committer class="com.norconex.committer.core.impl.FileSystemCommitter">
+				<directory>${workdir}/crawledFiles</directory>
+			</committer>
+			<committer class="com.norconex.committer.solr.SolrCommitter">
+			<solrURL>$collection_solr</solrURL>
+			<sourceReferenceField keep="false">document.reference</sourceReferenceField>
+			<targetReferenceField>id</targetReferenceField>
+			<targetContentField>text_content</targetContentField>
+			<commitBatchSize>10</commitBatchSize>
+			<queueDir>/optional/queue/path/</queueDir>
+			<queueSize>100</queueSize>
+			<maxRetries>2</maxRetries>
+			<maxRetryWait>5000</maxRetryWait>
+		</committer>
+			
+	  </committer>
+    </crawler>
+  </crawlers>
+
+</fscollector>
