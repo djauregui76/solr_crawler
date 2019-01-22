@@ -118,7 +118,12 @@
                 <!-- If your target repository does not support arbitrary fields,
            make sure you only keep the fields you need. -->
 		   <transformer class="com.norconex.importer.handler.transformer.impl.StripBetweenTransformer" inclusive="false">
-             <stripBetween>
+             <!-- new tagg added -->
+			 <stripBetween>
+              <start><![CDATA[<headerremove>]]></start>
+              <end><![CDATA[</headerremove>]]></end>
+            </stripBetween>
+			 <stripBetween>
               <start><![CDATA[<div class="navtop">]]></start>
               <end><![CDATA[<div class="container" id="header">]]></end>
             </stripBetween>
@@ -221,30 +226,42 @@
 				metadata.setString('text_clean',cleanC.replace(/[\n\r\t]/g,''));
 				var source = metadata.getString('document.reference');
 				var find = "/";
+				var lv1 = "NA";
+				var lv2 = "NA";
 				var result = [];
 				for (i = 0; i < source.length; ++i) {
-						if (source.substring(i, i + find.length) == find) {
-							result.push(i);
-						}
+					if (source.substring(i, i + find.length) == find) {
+						result.push(i);
+					}
 				}
 				var le = result.length;
-				
-	if( le > 2 ){
+				var biaslevel =0;
+		
+		if( le > 2 ){
 		if(le >  3 ){
-			metadata.setString('level_1',source.substring(result[2]+1,result[3]));
-			if(source.substring(result[3]+1,result[4]).indexOf(".") !== -1 || result[4] == null){
-				metadata.setString('level_2','NA');
-			}else { 
-				metadata.setString('level_2',source.substring(result[3]+1,result[4]));
+			lv1=source.substring(result[2]+1,result[3]);
+			biaslevel =1;
+			if(source.substring(result[3]+1,result[4]).indexOf(".") !== -1 || result[4] == null ){
+				biaslevel =1;				
+			}else {
+                lv2=source.substring(result[3]+1,result[4]);
+				biaslevel =2;
 			}
 		}else {
-			if(source.substring(result[2]+1).indexOf(".") !== -1 ){
-				metadata.setString('level_1','NA');
+			if(source.substring(result[2]+1).indexOf(".") !== -1 || result[3] == null){
+				biaslevel=0;
+				
 			}else { 
-			metadata.setString('level_1',source.substring(result[2]+1));
+			lv1=source.substring(result[2]+1);
+			biaslevel=0;
+			
 			}
 		}	  
 	}
+    metadata.setString('biaslevel',biaslevel);
+	metadata.setString('level_1',lv1);
+	metadata.setString('level_2',lv2);
+
 
 				
 			]]></script>
@@ -254,7 +271,7 @@
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean,level_1,level_2,solr_date</fields>
+            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean,level_1,level_2,solr_date,biaslevel</fields>
           </tagger>
 		  
         </postParseHandlers>
