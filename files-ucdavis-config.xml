@@ -28,11 +28,15 @@
 #set($transformer = "com.norconex.importer.handler.transformer.impl")
 
 <!-- Collection created in solar where to store documents -->
-	   #set($collection_solr	="http://localhost:8983/solr/files")
+	   #set($collection_solr	="http://hspawebsrch01:8983/solr/recommendations")
+<!-- Path to content -->
+	   #set($path	="D:/Apache/ucdavis/solr/recommended-links")
+<!-- Path to workdir -->
+	   #set($workdir	="D:/norconex/norconex-collector-filesystem-2.8.0/recommendation-output")
 
 
 
-
+ 
   <logsDir>${workdir}/logs</logsDir>
   <progressDir>${workdir}/progress</progressDir>
   
@@ -72,23 +76,31 @@
 
       <importer>
 	  <preParseHandlers>
+	  
+		<splitter class="com.norconex.importer.handler.splitter.impl.DOMSplitter"
+          selector="docresult"
+          parser="html"
+          sourceCharset="UTF-8" >
+          <!-- multiple "restrictTo" tags allowed (only one needs to match) -->
+      </splitter>
 	  <tagger class="com.norconex.importer.handler.tagger.impl.DOMTagger"
            
-          parser="xml"
+          parser="html"
           sourceCharset="UTF-8">
 		
 			<dom selector="title" toField="title" />
 			<dom selector="keywords"  toField="keywords" />
 			<dom selector="site"  toField="site" />
-			<dom selector="id"  toField="id" />
+			<dom selector="url"  toField="url" />
 			<dom selector="recommendation"  toField="recommendation" />
-			<dom selector="recommendation" extract="attr(algo)"  toField="ranking" />
+			<dom selector="recommendation" extract="attr(points)"  toField="ranking" />
 		</tagger>
 	  </preParseHandlers>
 	  
         <postParseHandlers>
-          
-		  
+          <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
+                    <rename fromField="url" toField="document.reference" overwrite="true"/>
+		  </tagger>
         </postParseHandlers>
       </importer>
       <committer class="com.norconex.committer.core.impl.MultiCommitter">
