@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xml>
-<!-- 
+<!--
    Copyright 2010-2017 Norconex Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+   	http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,21 +18,23 @@
 
 <httpcollector id="UCDAVIS HTTP Collector">
  <!-- Variables: Optionally define variables in this configuration file
-       using the "set" directive, or by using a file of the same name
-       but with the filterExtension ".variables" or ".properties".  Refer 
-       to site documentation to find out what each filterExtension does.
-       Finally, once can pass an optional properties file when starting the
-       crawler.  The following is good practice to reference frequently 
-       used classes in a shorter way.
-       -->
-	   <!-- URL to index -->
-	   #set($site_index1	= "https://health.ucdavis.edu/emergency/pdfs/VUSP2018description.pdf")
-	   <!-- URL to index second site -->
-	   #set($site_index2	= "https://hr.ucdavis.edu")
-	   <!-- Collection created in solar where to store documents -->
-	   #set($collection_solr	="http://localhost:8983/solr/internet")
-	   <!-- Deep of the crawler -->
-	   #set($site_deep	="1")
+   	using the "set" directive, or by using a file of the same name
+   	but with the filterExtension ".variables" or ".properties".  Refer
+   	to site documentation to find out what each filterExtension does.
+   	Finally, once can pass an optional properties file when starting the
+   	crawler.  The following is good practice to reference frequently
+   	used classes in a shorter way.
+   	-->
+   	<!-- URL to index -->
+   	#set($site_index1    = "https://health.ucdavis.edu")
+   	<!-- URL to index second site -->
+   	#set($site_index2    = "https://hr.ucdavis.edu")
+   	<!-- Collection created in solar where to store documents -->
+   	#set($collection_solr    ="http://hspawebsrch01:8983/solr/internet")
+	<!-- Collection created in solar where to store documents -->
+   	#set($collection_solr2    ="http://hspawebsrch01:8983/solr/intranet")
+<!-- Deep of the crawler -->
+	   #set($site_deep	="30")
 
 
 
@@ -50,9 +52,10 @@
            start URLs. -->
       <startURLs stayOnDomain="true" stayOnPort="true" stayOnProtocol="false">
         <url>$site_index1</url>
-		<!--url>$site_index2</url-->
+		<url>$site_index2</url>
+		
       </startURLs>
-      
+      <numThreads>30</numThreads>
 	  <!-- Optional URL normalization feature. The class must implement
          com.norconex.collector.http.url.IURLNormalizer, 
          like the following class does. This is in order to avoid duplicates pages
@@ -75,6 +78,11 @@
       <filter class="com.norconex.collector.core.filter.impl.ExtensionReferenceFilter" onMatch="exclude" caseSensitive="false">jpg,jpeg,gif,png,ico,css,js,svg</filter>
       <!-- Exclude dynamic pages containing a query (?) -->
       <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter" onMatch="exclude" caseSensitive="true">.+\?.*</filter>
+	  <!-- Exclude pages on explicit request -->
+      <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter" onMatch="exclude" caseSensitive="true">
+	  .*health.ucdavis.edu\/welcome\/features\/2015-2016\/12\/20151230_Snoopy-visit.html</filter>
+	  <filter class="com.norconex.collector.core.filter.impl.RegexReferenceFilter" onMatch="exclude" caseSensitive="true">
+	  .*health.ucdavis.edu\/welcome\/features\/2013-2014\/06\/20140626_July4_safety.html</filter>
     </referenceFilters>
 	  
       <!-- === Recommendations: ============================================ -->
@@ -101,11 +109,11 @@
          -->
       <metadataFilters>
 		<!-- Do not index content-type of CSS or JavaScript -->
-		<filter class="com.norconex.collector.core.filter.impl.RegexMetadataFilter" onMatch="exclude" caseSensitive="false" field="Content-Type">.*css.*|.*javascript.*|.*svg.*</filter>
+		<filter class="com.norconex.collector.core.filter.impl.RegexMetadataFilter" onMatch="exclude" caseSensitive="false" field="Content-Type">.*css.*|.*javascript.*|.*svg.*|.*zip.*|.*ZIP.*</filter>
 	  </metadataFilters>        
 
       <!-- Be as nice as you can to sites you crawl. -->
-      <delay default="1000" />
+      <delay default="800" />
       
       <!-- Document importing -->
       <importer>
@@ -115,6 +123,7 @@
                 <!-- If your target repository does not support arbitrary fields,
            make sure you only keep the fields you need. -->
 		   <transformer class="com.norconex.importer.handler.transformer.impl.StripBetweenTransformer" inclusive="false">
+		   <restrictTo field="document.contentType">text/html</restrictTo>
              <!-- new tagg added -->
 			 <stripBetween>
               <start><![CDATA[<headerremove>]]></start>
@@ -141,16 +150,19 @@
               <end><![CDATA[<!------------------ Start main content ------------------>]]></end>
             </stripBetween>
           </transformer> 
-		         <tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.preparse" />
-				
-                 <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
-                    <rename fromField="document.contentEncoding" toField="content_encoding" overwrite="true"/>
+		         <tagger class="com.norconex.importer.handler.tagger.impl.DocumentLengthTagger" field="document.size.preparse" >
+				<restrictTo field="document.contentType">text/html</restrictTo>
+				</tagger>
+                <tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
+				    <rename fromField="document.contentEncoding" toField="content_encoding" overwrite="true"/>
                     <rename fromField="document.contentType" toField="content_type" overwrite="true"/>
-                    <rename fromField="CONTENT" toField="contentClean" overwrite="true"/>
-					<rename fromField="text" toField="text_content" overwrite="true"/>
+                </tagger> 
+				<tagger class="com.norconex.importer.handler.tagger.impl.RenameTagger">
+				    <restrictTo field="document.contentType">text/html</restrictTo>
+				    <rename fromField="text" toField="text_content" overwrite="true"/>
                 </tagger> 
                 <tagger class="com.norconex.importer.handler.tagger.impl.DebugTagger" logLevel="DEBUG"/>
-				
+		
       
     </preParseHandlers>
 	  
@@ -220,6 +232,7 @@
 				metadata.setString('title',ti); 
 				} 
 				var cleanC = content;
+				cleanC = cleanC + metadata.getString('title');
 				metadata.setString('text_clean',cleanC.replace(/[\n\r\t]/g,''));
 				var source = metadata.getString('document.reference');
 				var find = "/";
@@ -268,7 +281,7 @@
           <!-- If your target repository does not support arbitrary fields,
                make sure you only keep the fields you need. -->
           <tagger class="com.norconex.importer.handler.tagger.impl.KeepOnlyTagger">
-            <fields>title,keywords,description,document.reference,text_content,contentClean,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean,level_1,level_2,solr_date,biaslevel</fields>
+            <fields>title,keywords,description,document.reference,text_content,content_encoding,content_type,copyright,author,document_length,lastmodified,text_clean,level_1,level_2,solr_date,biaslevel</fields>
           </tagger>
 		  
         </postParseHandlers>
@@ -286,8 +299,19 @@
 			<sourceReferenceField keep="false">document.reference</sourceReferenceField>
 			<targetReferenceField>id</targetReferenceField>
 			<targetContentField>text_content</targetContentField>
-			<commitBatchSize>10</commitBatchSize>
-			<queueDir>/optional/queue/path/</queueDir>
+			<commitBatchSize>100</commitBatchSize>
+			<queueDir>./internet-output/optional/queue</queueDir>
+			<queueSize>100</queueSize>
+			<maxRetries>2</maxRetries>
+			<maxRetryWait>5000</maxRetryWait>
+		</committer>
+		<committer class="com.norconex.committer.solr.SolrCommitter">
+			<solrURL>$collection_solr2</solrURL>
+			<sourceReferenceField keep="false">document.reference</sourceReferenceField>
+			<targetReferenceField>id</targetReferenceField>
+			<targetContentField>text_content</targetContentField>
+			<commitBatchSize>100</commitBatchSize>
+			<queueDir>./internet-output/optional2/queue</queueDir>
 			<queueSize>100</queueSize>
 			<maxRetries>2</maxRetries>
 			<maxRetryWait>5000</maxRetryWait>
